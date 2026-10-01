@@ -63,19 +63,6 @@ class LlamaPlugin : public Plugin {
         llama_log_set(ggml_to_geniex_log, nullptr);
         mtmd_helper_log_set(ggml_to_geniex_log, nullptr);
 
-        // Give the Hexagon backend a spare virtual HTP session by default, so
-        // the mmproj (vision/audio encoder) can run on its own session instead
-        // of sharing the LM's (see params.cpp resolve_vision_device). Read once
-        // at backend registration below; only set if the caller/environment
-        // hasn't already picked a session count.
-        if (!std::getenv("GGML_HEXAGON_DEVICES") && !std::getenv("GGML_HEXAGON_NDEV")) {
-#if defined(_WIN32)
-            _putenv_s("GGML_HEXAGON_DEVICES", "2");
-#else
-            setenv("GGML_HEXAGON_DEVICES", "2", 0);
-#endif
-        }
-
         std::filesystem::path backend_dir;
 #if defined(_WIN32)
         // On Windows, use wide string API to properly handle Unicode paths
