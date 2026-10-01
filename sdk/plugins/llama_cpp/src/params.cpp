@@ -260,8 +260,8 @@ ggml_backend_dev_t resolve_vision_device(const std::vector<ggml_backend_dev_t>& 
     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
         ggml_backend_dev_t dev = ggml_backend_dev_get(i);
         if (!is_htp(dev)) continue;
-        bool used_by_lm = std::any_of(
-            lm_devices.begin(), lm_devices.end(), [&](ggml_backend_dev_t d) { return d == dev; });
+        bool used_by_lm =
+            std::any_of(lm_devices.begin(), lm_devices.end(), [&](ggml_backend_dev_t d) { return d == dev; });
         if (!used_by_lm) {
             GENIEX_LOG_INFO("Using separate HTP session '{}' for mmproj", ggml_backend_dev_name(dev));
             return dev;
