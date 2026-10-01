@@ -74,7 +74,7 @@ int32_t LlamaVlm::create(const geniex_VlmCreateInput* input) {
         }
         GENIEX_LOG_INFO("Using vision device override: {}", input->vit_device_id);
     } else if (!selection->empty()) {
-        vision_device = selection->front();
+        vision_device = resolve_vision_device(*selection);
     }
 
     // See llm.cpp for why this is registry-scoped rather than per-device.

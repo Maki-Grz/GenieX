@@ -24,6 +24,15 @@ enum class Device { CPU, GPU, NPU };
 
 std::optional<std::vector<ggml_backend_dev_t>> resolve_devices(const char* device_id);
 
+// Pick the mmproj (vision/audio encoder) device given the LM's resolved
+// device list. When the LM runs on HTP, sharing its session with the mmproj
+// hits a fastrpc_mmap/session-contention failure on some HTP targets (e.g.
+// IQ9/QCS9075) as soon as the encoder allocates its own compute buffer, even
+// though neither side is short on memory alone. Prefer a distinct HTP
+// session (GGML_HEXAGON_DEVICES must expose more than one) for the mmproj;
+// fall back to sharing the LM's device when no other HTP session exists.
+ggml_backend_dev_t resolve_vision_device(const std::vector<ggml_backend_dev_t>& lm_devices);
+
 // Reverse-classify a resolved device selection. Mirrors the alias table in
 // sdk/src/device.cpp:
 //   cpu    -> n_gpu_layers == 0                     -> CPU

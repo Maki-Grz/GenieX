@@ -11,6 +11,7 @@
 #include <thread>
 
 #include "common.h"
+#include "ggml-backend.h"
 #include "logging.h"
 #include "speculative.h"
 
@@ -242,6 +243,36 @@ std::optional<std::vector<ggml_backend_dev_t>> resolve_devices(const char* devic
         devices.push_back(nullptr);  // NULL terminator for llama_model_params::devices
     }
     return devices;
+}
+
+ggml_backend_dev_t resolve_vision_device(const std::vector<ggml_backend_dev_t>& lm_devices) {
+    if (lm_devices.empty()) return nullptr;
+
+    auto is_htp = [](ggml_backend_dev_t dev) {
+        const char* name = dev ? ggml_backend_dev_name(dev) : nullptr;
+        return name && std::strncmp(name, "HTP", 3) == 0;
+    };
+
+    if (!is_htp(lm_devices.front())) {
+        return lm_devices.front();  // GPU/CPU: no session-contention concern, keep as-is.
+    }
+
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+        ggml_backend_dev_t dev = ggml_backend_dev_get(i);
+        if (!is_htp(dev)) continue;
+        bool used_by_lm =
+            std::any_of(lm_devices.begin(), lm_devices.end(), [&](ggml_backend_dev_t d) { return d == dev; });
+        if (!used_by_lm) {
+            GENIEX_LOG_INFO("Using separate HTP session '{}' for mmproj", ggml_backend_dev_name(dev));
+            return dev;
+        }
+    }
+
+    GENIEX_LOG_WARN(
+        "No spare HTP session for mmproj (GGML_HEXAGON_DEVICES=1); sharing '{}' with the LM, which may fail to "
+        "allocate its compute buffer",
+        ggml_backend_dev_name(lm_devices.front()));
+    return lm_devices.front();
 }
 
 void apply_tool_fields(common_chat_msg& msg, const geniex_ToolCall* tool_calls, int32_t tool_call_count,
