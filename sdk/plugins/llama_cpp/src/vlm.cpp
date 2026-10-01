@@ -89,7 +89,10 @@ int32_t LlamaVlm::create(const geniex_VlmCreateInput* input) {
         return GENIEX_ERROR_COMMON_MODEL_LOAD;
     }
 
-    llama_context_params cpar = build_context_params(config, /*n_ctx_default=*/16384, device);
+    // 16384 is fine on CPU/GPU, but on IQ9 even an otherwise-safe n_ubatch still overflows HTP's
+    // fastrpc/CMA pool once n_ctx (and thus the KV cache) gets that large. See qcom-ai-hub/geniex#1683.
+    const int32_t         n_ctx_default = device == Device::NPU ? 4096 : 16384;
+    llama_context_params cpar = build_context_params(config, n_ctx_default, device);
 
     this->ctx = llama_init_from_model(this->model, cpar);
     if (!this->ctx) {

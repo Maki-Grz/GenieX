@@ -84,9 +84,12 @@ std::optional<common_params_speculative> build_speculative_params(const geniex_M
 
 llama_context_params build_context_params(
     const geniex_ModelConfig& config, int32_t n_ctx_default, Device device, const common_params_speculative* spec) {
+    // NPU column capped at 256 (not 1024): on IQ9, ggml-hexagon's per-ubatch compute buffer for
+    // gemma-4-E4B/Qwen3-ASR-1.7B fails to fastrpc_mmap above that, independent of n_batch/n_ctx
+    // and regardless of GGML_HEXAGON_MBUF. See qcom-ai-hub/geniex#1683.
     static const uint32_t ubatch_matrix[3][3] = {
-        {2048, 512, 1024},  // Linux
-        {2048, 512, 1024},  // Windows
+        {2048, 512, 256},   // Linux
+        {2048, 512, 256},   // Windows
         {1024, 512, 1024}   // Android
     };
     static const bool fa_matrix[3][3] = {
