@@ -177,14 +177,10 @@ llama_context* init_context_with_ubatch_ladder(llama_model* model, const geniex_
 
     // Only NPU hits the contiguous-allocation failure this ladder works around, and only when the
     // caller hasn't already pinned n_ubatch themselves (an explicit override is a deliberate choice,
-    // not a default we get to second-guess).
+    // not a default we get to second-guess). Skip the warmup probe entirely here too — it's extra
+    // decode-at-load-time cost/risk this fix has no reason to impose outside the NPU case it targets.
     if (device != Device::NPU || config.n_ubatch > 0) {
         llama_context* ctx = llama_init_from_model(model, cpar);
-        if (ctx && !warmup_decode(ctx)) {
-            GENIEX_LOG_WARN(
-                "[Optimise] warmup decode failed at n_ubatch={} (not retried: n_ubatch pinned or non-NPU)",
-                cpar.n_ubatch);
-        }
         if (out_cpar) *out_cpar = cpar;
         return ctx;
     }
