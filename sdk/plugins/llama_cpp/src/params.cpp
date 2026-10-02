@@ -91,9 +91,9 @@ llama_context_params build_context_params(
     // hasn't pinned n_ubatch, init_context_with_ubatch_ladder() below halves this value and
     // retries on failure. See qcom-ai-hub/geniex#1683.
     static const uint32_t ubatch_matrix[3][3] = {
-        {2048, 512, 256},   // Linux
-        {2048, 512, 256},   // Windows
-        {1024, 512, 1024}   // Android
+        {2048, 512, 256},  // Linux
+        {2048, 512, 256},  // Windows
+        {1024, 512, 1024}  // Android
     };
     static const bool fa_matrix[3][3] = {
         {true, false, true},  // Linux
@@ -197,8 +197,8 @@ llama_context* init_context_with_ubatch_ladder(llama_model* model, const geniex_
             return nullptr;
         }
         uint32_t next_ubatch = std::max(kUbatchLadderFloor, cpar.n_ubatch / 2);
-        GENIEX_LOG_WARN(
-            "[Optimise] context init/warmup failed at n_ubatch={}; retrying with n_ubatch={}", cpar.n_ubatch,
+        GENIEX_LOG_WARN("[Optimise] context init/warmup failed at n_ubatch={}; retrying with n_ubatch={}",
+            cpar.n_ubatch,
             next_ubatch);
         cpar.n_ubatch = next_ubatch;
     }
