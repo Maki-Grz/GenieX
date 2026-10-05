@@ -73,6 +73,9 @@ static void usage(const char* argv0) {
         "                         sustained_high_performance, burst (default)\n"
         "  --warmup N             default 1\n"
         "  --no-warmup            equivalent to --warmup 0\n"
+        "  --log LEVEL            none, error, warn, info (default), debug, trace. For qairt\n"
+        "                         this also sets the QNN backend's log level; debug/trace\n"
+        "                         slow decode by ~15%% or more, so don't time with them\n"
         "  --temperature F        default 0.0\n"
         "  --top-p F              default 0.0 (defers to the bundle's dialog.sampler.top-p,\n"
         "                         then the plugin default, e.g. 0.95 for qairt/llama_cpp)\n"
@@ -297,6 +300,7 @@ void parse_args(int argc, char** argv, options_t* o) {
     o->draft_min               = 0;
     o->draft_p_min             = 0.0f;
     o->power_mode              = NULL;
+    o->log_level               = "info";
     o->qairt_lib               = NULL;
     o->output_json             = NULL;
     o->output_md               = NULL;
@@ -324,6 +328,8 @@ void parse_args(int argc, char** argv, options_t* o) {
             o->tokenizer_path = arg_value(argc, argv, &i, a);
         } else if (strcmp(a, "--mmproj-path") == 0) {
             o->mmproj_path = arg_value(argc, argv, &i, a);
+        } else if (strcmp(a, "--log") == 0) {
+            o->log_level = arg_value(argc, argv, &i, a);
         } else if (strcmp(a, "--vlm") == 0) {
             o->force_vlm = true;
         } else if (strcmp(a, "--image") == 0) {
