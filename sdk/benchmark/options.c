@@ -73,7 +73,7 @@ static void usage(const char* argv0) {
         "                         sustained_high_performance, burst (default)\n"
         "  --warmup N             default 1\n"
         "  --no-warmup            equivalent to --warmup 0\n"
-        "  --log LEVEL            none, error, warn, info (default), debug, trace. For qairt\n"
+        "  --log LEVEL            none, error, warn (default: error), info, debug, trace. For qairt\n"
         "                         this also sets the QNN backend's log level; debug/trace\n"
         "                         slow decode by ~15%% or more, so don't time with them\n"
         "  --temperature F        default 0.0\n"
@@ -304,7 +304,7 @@ void parse_args(int argc, char** argv, options_t* o) {
     o->draft_min               = 0;
     o->draft_p_min             = 0.0f;
     o->power_mode              = NULL;
-    o->log_level               = "info";
+    o->log_level               = "error";
     o->qairt_lib               = NULL;
     o->output_json             = NULL;
     o->output_md               = NULL;
