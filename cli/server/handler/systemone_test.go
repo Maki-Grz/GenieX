@@ -49,6 +49,13 @@ func TestCompileSystemOne(t *testing.T) {
 	if err != nil || answer.(map[string]any)["noul"] != float64(1) {
 		t.Fatalf("incorrect noul: %v %v", answer, err)
 	}
+	answer, err = systemOneAnswer(fields[1], []float32{0, float32(math.Log(3))})
+	if err != nil {
+		t.Fatalf("failed to score noul: %v", err)
+	}
+	if got := answer.(map[string]any)["noul"].(float64); math.Abs(got-0.75) > 1e-6 {
+		t.Fatalf("incorrect noul probability: got %v, want 0.75", got)
+	}
 	answer, err = systemOneAnswer(fields[2], []float32{0, 0})
 	if err != nil || answer.(map[string]any)["score"] != 0.5 || answer.(map[string]any)["confidence"] != float64(0) || string(answer.(map[string]any)["legend"].(map[string]json.RawMessage)["1"]) != `{"what":"High"}` {
 		t.Fatalf("incorrect score: %v %v", answer, err)

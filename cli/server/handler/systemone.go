@@ -121,6 +121,7 @@ func compileSystemOne(req systemOneRequest) (string, []systemOneField, error) {
 	if err != nil || strings.TrimSpace(state) == "" {
 		return "", nil, errors.New("state must be a nonempty string, object, or array")
 	}
+
 	var fields []systemOneField
 	err = systemOneObject(req.Questions, func(name string, raw json.RawMessage) error {
 		if len(fields) >= 64 || strings.TrimSpace(name) == "" {
@@ -140,6 +141,7 @@ func compileSystemOne(req systemOneRequest) (string, []systemOneField, error) {
 				Code: string(rune('A' + len(field.Choices))), Value: value, Description: description,
 			})
 		}
+
 		switch q.Type {
 		case "noul":
 			no, yes := "No", "Yes"
@@ -168,6 +170,7 @@ func compileSystemOne(req systemOneRequest) (string, []systemOneField, error) {
 			}
 			add(false, no)
 			add(true, yes)
+
 		case "choice":
 			if err := systemOneObject(q.Criteria, func(key string, value json.RawMessage) error {
 				if strings.TrimSpace(key) == "" {
@@ -186,6 +189,7 @@ func compileSystemOne(req systemOneRequest) (string, []systemOneField, error) {
 			}); err != nil {
 				return fmt.Errorf("question %q: %w", name, err)
 			}
+
 		case "score":
 			var descriptions []json.RawMessage
 			if len(q.Criteria) == 0 || json.Unmarshal(q.Criteria, &descriptions) != nil || bytes.Equal(q.Criteria, []byte("null")) {
@@ -203,9 +207,11 @@ func compileSystemOne(req systemOneRequest) (string, []systemOneField, error) {
 				add(strconv.Itoa(i), text)
 				field.legend = append(field.legend, raw)
 			}
+
 		default:
 			return fmt.Errorf("question %q: type must be choice, noul, or score", name)
 		}
+
 		maxChoices := 26
 		if q.Type == "score" {
 			maxChoices = 10
@@ -246,34 +252,38 @@ func systemOneAnswer(field systemOneField, logits []float32) (any, error) {
 		peak = math.Max(peak, float64(logit))
 	}
 	probs := make([]float64, len(logits))
-	var sum, entropy, score float64
+	var sum float64
 	for i, logit := range logits {
 		probs[i] = math.Exp(float64(logit) - peak)
 		sum += probs[i]
 	}
+	if field.kind == "noul" {
+		return map[string]any{"type": "noul", "noul": probs[1] / sum}, nil
+	}
+
 	probabilities := make(map[string]float64, len(logits))
-	legend := make(map[string]json.RawMessage, len(logits))
+	var legend map[string]json.RawMessage
+	if field.kind == "score" {
+		legend = make(map[string]json.RawMessage, len(logits))
+	}
 	winner := 0
+	var entropy, score float64
 	for i, choice := range field.Choices {
 		probs[i] /= sum
-		if logits[i] > logits[winner] {
+		if field.kind == "choice" && logits[i] > logits[winner] {
 			winner = i
 		}
 		if probs[i] > 0 {
 			entropy -= probs[i] * math.Log(probs[i])
 		}
-		score += float64(i) * probs[i]
-		if field.kind != "noul" {
-			key := choice.Value.(string)
-			probabilities[key] = probs[i]
-			if field.kind == "score" {
-				legend[key] = field.legend[i]
-			}
+		key := choice.Value.(string)
+		probabilities[key] = probs[i]
+		if field.kind == "score" {
+			score += float64(i) * probs[i]
+			legend[key] = field.legend[i]
 		}
 	}
-	if field.kind == "noul" {
-		return map[string]any{"type": "noul", "noul": probs[1]}, nil
-	}
+
 	confidence := math.Max(0, math.Min(1, 1-entropy/math.Log(float64(len(probs)))))
 	if field.kind == "choice" {
 		return map[string]any{"type": "choice", "choice": field.Choices[winner].Value, "probabilities": probabilities, "confidence": confidence}, nil
@@ -297,11 +307,13 @@ func SystemOne(c *gin.Context) {
 		c.JSON(status, gin.H{"error": err.Error()})
 		return
 	}
+
 	state, fields, err := compileSystemOne(req)
 	if err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
 	}
+
 	paths, err := geniex_sdk.ModelGetPaths(req.Model)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -311,6 +323,7 @@ func SystemOne(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "systemone requires a llama_cpp LLM model"})
 		return
 	}
+
 	modelParam, err := service.ResolveModelParam(paths.RuntimeID, paths.ModelName, req.NCtx, req.Ngl, req.Compute, "", req.PowerMode, service.Chipset(), types.SpecParam{})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -320,6 +333,7 @@ func SystemOne(c *gin.Context) {
 	if writeKeepAliveError(c, err) {
 		return
 	}
+
 	model := acquired.Model
 	schema := systemOneSchema(fields)
 	payload, err := json.Marshal(struct {
@@ -330,6 +344,7 @@ func SystemOne(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	answers := make(map[string]any, len(fields))
 	inputTokens := 0
 	for i, field := range fields {
@@ -360,6 +375,7 @@ func SystemOne(c *gin.Context) {
 			c.JSON(status, gin.H{"error": err.Error(), "code": code})
 			return
 		}
+
 		answer, err := systemOneAnswer(field, logits)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
