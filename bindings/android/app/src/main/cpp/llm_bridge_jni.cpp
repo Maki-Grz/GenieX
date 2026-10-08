@@ -196,19 +196,21 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_geniex_sdk_jni_Llm_applyChatTempla
         env->ReleaseStringUTFChars(jtools, tools_cstr);
     }
 
-    jclass    cls  = env->FindClass("com/geniex/sdk/bean/LlmApplyChatTemplateOutput");
-    jmethodID ctor = env->GetMethodID(cls, "<init>", "(Ljava/lang/String;)V");
-
     free_llm_chat_messages(msgs);
     clear_jni_cstr_pool();
 
     if (ret < 0 || !output.formatted_text) {
-        jobject result = env->NewObject(cls, ctor, env->NewStringUTF(""));
-        return result;
+        LOGe("[applyChatTemplate] failed! ret=%d", ret);
+        const char* reason =
+            ret < 0 ? geniex_get_error_message(static_cast<geniex_ErrorCode>(ret)) : "formatted text is null";
+        throw_runtime_exception(env, "applyChatTemplate failed: %s", reason);
+        return nullptr;
     }
 
-    jstring formatted = env->NewStringUTF(output.formatted_text);
-    jobject result    = env->NewObject(cls, ctor, formatted);
+    jclass    cls       = env->FindClass("com/geniex/sdk/bean/LlmApplyChatTemplateOutput");
+    jmethodID ctor      = env->GetMethodID(cls, "<init>", "(Ljava/lang/String;)V");
+    jstring   formatted = env->NewStringUTF(output.formatted_text);
+    jobject   result    = env->NewObject(cls, ctor, formatted);
     free(output.formatted_text);
     return result;
 }
