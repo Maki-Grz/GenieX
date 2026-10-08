@@ -82,7 +82,8 @@ paths:
         answer without generating text. The Nimble system prompt is supplied
         by the server. Model probabilities are normalized over allowed choices;
         they are not Jev's calibrated probabilities. This local backend limits
-        choices to 26 and questions to 64 (Jev supports up to 255 choices).
+        choice options to 26, score levels to 10, and questions to 64 (Jev
+        supports up to 255 choice options).
       operationId: PostV1SystemOne
       requestBody:
         required: true
@@ -172,7 +173,9 @@ components:
             - type: array
         questions:
           type: object
-          description: 1–64 named questions. Options preserve their input order (2–26 each).
+          description: >
+            1–64 named questions. Choice options preserve order (2–26), score
+            levels preserve order (2–10), and noul has false/true candidates.
           additionalProperties:
             type: object
             required: [type, instructions]
@@ -183,7 +186,9 @@ components:
               instructions:
                 description: Nonempty string, object, or array defining the question.
               criteria:
-                description: "choice: option/description object; noul: optional false/true descriptions; score: ordered description array."
+                description: >
+                  choice: 2–26 option/description entries; noul: optional
+                  false/true descriptions; score: 2–10 ordered level descriptions.
         nctx:
           type: integer
           description: Context size; defaults to the server setting.
