@@ -12,7 +12,6 @@
 
 #include "chat.h"
 #include "common.h"
-#include "ggml-backend.h"
 #include "htp_session.h"
 #include "logging.h"
 #include "params.h"
@@ -54,25 +53,6 @@ int32_t LlamaLlm::create(const geniex_LlmCreateInput* input) {
                 GENIEX_LOG_WARN("power_mode is only meaningful on the NPU device; ignoring on this device");
             }
             htp::reacquire_before_load();
-        }
-    }
-
-    // FIX: gpt oss offload patch
-    {
-        std::string model_path_lower(input->model_path);
-        std::transform(model_path_lower.begin(), model_path_lower.end(), model_path_lower.begin(), ::tolower);
-        bool is_gpt_oss_model =
-            (model_path_lower.find("gpt") != std::string::npos) && (model_path_lower.find("oss") != std::string::npos);
-
-        if (is_gpt_oss_model) {
-            tensor_overrides[0]        = {"\\.ffn_(up|down|gate)_exps\\.(weight|bias)", ggml_backend_cpu_buffer_type()};
-            tensor_overrides[1]        = {nullptr, nullptr};  // Null terminator
-            mpar.tensor_buft_overrides = tensor_overrides;
-            GENIEX_LOG_INFO(
-                "GPT OSS model detected - MoE expert tensors "
-                "(ffn_*_exps.weight/bias) will be forced to CPU");
-        } else {
-            mpar.tensor_buft_overrides = nullptr;
         }
     }
 
