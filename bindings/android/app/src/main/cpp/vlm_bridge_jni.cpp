@@ -214,8 +214,8 @@ extern "C" JNIEXPORT jobject JNICALL Java_com_geniex_sdk_jni_Vlm_applyChatTempla
 
     if (ret < 0 || !output.formatted_text) {
         LOGe("[applyChatTemplate] failed! ret=%d", ret);
-        const char* reason = ret < 0 ? geniex_get_error_message(static_cast<geniex_ErrorCode>(ret))
-                                     : "formatted text is null";
+        const char* reason =
+            ret < 0 ? geniex_get_error_message(static_cast<geniex_ErrorCode>(ret)) : "formatted text is null";
         throw_runtime_exception(env, "applyChatTemplate failed: %s", reason);
         return nullptr;
     }
